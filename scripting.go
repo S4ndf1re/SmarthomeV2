@@ -6,20 +6,24 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
+	"sync"
 )
 
 type ScriptDescriptor struct {
 	Filepath   string `json:"filepath"`
+	Name       string `json:"name"`
 	Sourcecode string `json:"sourcecode"`
+	mutex      sync.Mutex
 	vm         *goja.Runtime
 }
 
-func LoadAllScripts(root string) []ScriptDescriptor {
-	descriptors := make([]ScriptDescriptor, 0)
+func LoadAllScripts(root string) []*ScriptDescriptor {
+	descriptors := make([]*ScriptDescriptor, 0)
 
 	_ = filepath.Walk(root, func(path string, info fs.FileInfo, err error) error {
 		if !info.IsDir() && info.Name()[len(info.Name())-3:] == ".js" {
-			if script, err := NewScript(path); err == nil {
+			if script, err := NewScript(path, info.Name()[:len(info.Name())-3]); err == nil {
 				descriptors = append(descriptors, script)
 			}
 		}
@@ -29,9 +33,11 @@ func LoadAllScripts(root string) []ScriptDescriptor {
 	return descriptors
 }
 
-func NewScript(path string) (ScriptDescriptor, error) {
-	descriptor := ScriptDescriptor{}
+func NewScript(path, name string) (*ScriptDescriptor, error) {
+	descriptor := new(ScriptDescriptor)
 	descriptor.Filepath = path
+	descriptor.Name = name
+	descriptor.mutex = sync.Mutex{}
 
 	vm := goja.New()
 
@@ -54,9 +60,12 @@ func NewScript(path string) (ScriptDescriptor, error) {
 	return descriptor, nil
 }
 
-func (script *ScriptDescriptor) run() error {
-	_, err := script.vm.RunScript(script.Filepath, script.Sourcecode)
-	return err
+func (script *ScriptDescriptor) run(wg *sync.WaitGroup) {
+	script.mutex.Lock()
+	wg.Add(1)
+	defer wg.Done()
+	defer script.mutex.Unlock()
+	_, _ = script.vm.RunScript(script.Filepath, script.Sourcecode)
 }
 
 func (script *ScriptDescriptor) registerObjects() {
@@ -67,6 +76,9 @@ func (script *ScriptDescriptor) registerObjects() {
 
 func (script *ScriptDescriptor) registerFunctions() {
 	_ = script.vm.Set("GetScriptInstance", script.GetScriptInstance)
+	_ = script.vm.Set("ReadFile", script.ReadFile)
+	_ = script.vm.Set("WriteFile", script.WriteFile)
+	RegisterToGojaVM(script.vm)
 }
 
 func (script *ScriptDescriptor) GetScriptInstance() *goja.Object {
@@ -77,7 +89,6 @@ func (script *ScriptDescriptor) MQTTConfig(call goja.ConstructorCall) *goja.Obje
 	instance := script.vm.ToValue(new(MQTTConfig)).(*goja.Object)
 	_ = instance.SetPrototype(call.This.Prototype())
 	return instance
-
 }
 
 func (script *ScriptDescriptor) MQTTWrapper(call goja.ConstructorCall) *goja.Object {
@@ -90,4 +101,48 @@ func (script *ScriptDescriptor) MQTTWrapper(call goja.ConstructorCall) *goja.Obj
 		return instance
 	}
 	return nil
+}
+
+func (script *ScriptDescriptor) ReadFile(path string) (string, error) {
+	strings.ReplaceAll(path, "..", ".")
+	path = "scriptfiles" + string(filepath.Separator) + script.Name + string(filepath.Separator) + path
+	file, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	data, err := ioutil.ReadAll(file)
+	if err != nil {
+		return "", err
+	}
+
+	return string(data), nil
+}
+
+func (script *ScriptDescriptor) WriteFile(path, data string) error {
+	strings.ReplaceAll(path, "..", ".")
+	newPath := filepath.Join("scriptfiles", script.Name)
+	if err := os.MkdirAll(newPath, os.ModePerm); err != nil {
+		return err
+	}
+	newPath = filepath.Join(newPath, path)
+	file, err := os.Create(newPath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	if _, err = file.WriteString(data); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (script *ScriptDescriptor) Close() {
+	var close func()
+	script.vm.ExportTo(script.vm.Get("close"), &close)
+	close()
+	script.vm.Interrupt("Dispose engine")
 }

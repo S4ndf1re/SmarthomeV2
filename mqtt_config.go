@@ -1,29 +1,25 @@
 package main
 
 import (
+	"fmt"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"net/url"
-	"strconv"
 )
 
 type MQTTConfig struct {
 	LastWill        bool   `json:"lastWill"`
-	LastWillMessage []byte `json:"lastWillMessage"`
+	LastWillTopic   string `json:"lastWillTopic"`
+	LastWillMessage string `json:"lastWillMessage"`
 	LastWillRetain  bool   `json:"lastWillRetain"`
-	hostname        string
-	port            int
+	Hostname        string `json:"hostname"`
+	Port            int    `json:"port"`
 }
 
 func (config MQTTConfig) ToPahoClientOptions() *mqtt.ClientOptions {
 	options := mqtt.NewClientOptions()
-	options.Servers = []*url.URL{
-		{
-			Host: config.hostname + ":" + strconv.Itoa(config.port),
-		},
+	options.AddBroker(fmt.Sprintf("tcp://%s:%d", config.Hostname, config.Port))
+	if config.LastWill {
+		options.SetWill(config.LastWillTopic, config.LastWillMessage, 0, config.LastWillRetain)
 	}
-	options.WillEnabled = config.LastWill
-	options.WillPayload = config.LastWillMessage
-	options.WillRetained = config.LastWillRetain
 
 	return options
 }
