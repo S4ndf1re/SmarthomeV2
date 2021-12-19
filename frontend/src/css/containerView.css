@@ -1,0 +1,8 @@
+.containerView {
+    border-color: #463f3a;
+    border-radius: 30px;
+    border-style: solid;
+    background-color: white;
+    padding: 10px 10px;
+    margin: 20px 100px;
+}

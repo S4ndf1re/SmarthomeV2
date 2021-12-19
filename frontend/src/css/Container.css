@@ -1,0 +1,25 @@
+.container {
+    margin: 50px 30px;
+    padding: 10px 40px;
+    border-color: #463f3a;
+    border-radius: 30px;
+    border-style: solid;
+    width: fit-content;
+    background-color: #f4f3ee;
+    transition-duration: 0.4s;
+    border-width: 1px;
+    display: inline-block;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 40px;
+    color: #463f3a
+}
+
+
+.container:hover {
+    background-color: #bcb8b1;
+}
+
+.container:active {
+    background-color: #8a8685;
+}

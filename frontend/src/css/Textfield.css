@@ -1,0 +1,20 @@
+
+.textfieldClass {
+    border-color: #463f3a;
+    border-radius: 10px;
+    border-style: solid;
+    background-color: #f4f3ee;
+    border-width: 1px;
+    display: flex;
+    color: #463f3a;
+    width: 75%;
+}
+
+.textInputClass {
+    border-color: #463f3a;
+    border-radius: 10px;
+    border-style: solid;
+    border-width: 1px;
+    margin-left: 20px;
+    width: 100%;
+}
