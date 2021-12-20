@@ -17,8 +17,9 @@ class App extends React.Component {
     }
 
     componentDidMount() {
-        window.fetch("http://" + window.location.hostname + ":1337/gui", {
-                credentials: "include"
+        window.fetch("/gui", {
+                credentials: "include",
+                redirect: "follow"
             }
         ).then(response => response.json()).then(d => {
             this.setState({data: d})
@@ -31,7 +32,7 @@ class App extends React.Component {
                 {
                     this.state.data.containers.map(v =>
                         <Route key={v.name} exact path={"/" + v.name}>
-                            <ComponentPage name={v.name} data={v.list} onInitRequest={v.onInitRequest}/>
+                            <ComponentPage name={v.name} text={v.text} list={v.list} onInitRequest={v.onInitRequest}/>
                         </Route>
                     )
                 }

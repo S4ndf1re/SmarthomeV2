@@ -22,8 +22,9 @@ class Button extends React.Component {
     }
 
     clickEvent() {
-        window.fetch("http://" + window.location.hostname + ":1337/" + this.state.onClick, {
-            credentials: "include"
+        window.fetch(this.state.onClick, {
+            credentials: "include",
+            redirect: "follow"
         })
     }
 }

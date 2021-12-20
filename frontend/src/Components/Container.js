@@ -8,8 +8,9 @@ class Container extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            name: props.data.name,
-            list: props.data.list
+            name: props.name,
+            text: props.text,
+            list: props.list
         }
     }
 
@@ -17,7 +18,7 @@ class Container extends React.Component {
     render() {
         return (
             <Link to={this.state.name} className="container blog-shadow-dreamy">
-                <p>{this.state.name}</p>
+                <p>{this.state.text}</p>
             </Link>
         );
     }

@@ -33,8 +33,9 @@ class Checkbox extends React.Component {
     }
 
     componentDidMount() {
-        window.fetch("http://" + window.location.hostname + ":1337/" + this.state.getStateClick, {
-            credentials: "include"
+        window.fetch(this.state.getStateClick, {
+            credentials: "include",
+            redirect: "follow"
         }).then(data => data.json()).then(data => {
             document.getElementById(this.getID()).checked = data.status
             this.setState({checked: data.status})
@@ -48,8 +49,9 @@ class Checkbox extends React.Component {
         } else {
             path = this.state.offStateClick
         }
-        window.fetch("http://" + window.location.hostname + ":1337/" + path, {
-            credentials: "include"
+        window.fetch(path, {
+            credentials: "include",
+            redirect: "follow"
         }).then(data => data.json()).then(data => {
             document.getElementById(this.getID()).checked = data.status
             this.setState({checked: data.status});

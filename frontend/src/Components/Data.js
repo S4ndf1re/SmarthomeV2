@@ -21,7 +21,7 @@ class Data extends React.Component {
     componentDidMount() {
         this.connect()
 
-        fetch("http://" + window.location.hostname + ":1337/" + this.state.updateRequest, {
+        fetch(this.state.updateRequest, {
             credentials: "include"
         }).then(data => data.json()).then(data => {
             this.setState({child: data})
@@ -33,7 +33,7 @@ class Data extends React.Component {
      * This function establishes the connect with the websocket and also ensures constant reconnection if connection closes
      */
     connect = () => {
-        let ws = new WebSocket("ws://" + window.location.hostname + ":1337/" + this.state.updateSocket);
+        let ws = new WebSocket("ws://" + window.location.host + this.state.updateSocket);
         let that = this; // cache the this
         let connectInterval;
 

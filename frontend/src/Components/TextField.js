@@ -34,7 +34,7 @@ class TextField extends React.Component {
         console.log(key)
         let b = document.getElementById(this.getID()).value
         let c = JSON.stringify({text: b})
-        window.fetch("http://" + window.location.hostname + ":1337/" + this.state.updateRequest, {
+        window.fetch(this.state.updateRequest, {
             method: 'POST',
             mode: 'cors',
             cache: 'no-cache',

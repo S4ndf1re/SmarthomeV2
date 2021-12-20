@@ -10,7 +10,8 @@ class ComponentPage extends React.Component {
         super(props);
         this.state = {
             name: props.name,
-            list: props.data,
+            text: props.text,
+            list: props.list,
             onInitRequest: props.onInitRequest
         }
         this.components = []
@@ -25,8 +26,9 @@ class ComponentPage extends React.Component {
 
     componentDidMount() {
         this.updateList()
-        window.fetch("http://" + window.location.hostname + ":1337/" + this.state.onInitRequest, {
-                credentials: "include"
+        window.fetch(this.state.onInitRequest, {
+                credentials: "include",
+                redirect: "follow"
             }
         ).catch(err => console.log(err))
     }
@@ -34,7 +36,7 @@ class ComponentPage extends React.Component {
     render() {
         return (
             <div>
-                <h1> {this.state.name}
+                <h1> {this.state.text}
                 </h1>
                 <div className="containerView blog-shadow-dreamy">
                     <>

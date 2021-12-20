@@ -15,8 +15,9 @@ class ComponentViewer extends React.Component {
     }
 
     componentDidMount() {
-        window.fetch("http://" + window.location.hostname + ":1337/gui", {
-                credentials: "include"
+        window.fetch("/gui", {
+                credentials: "include",
+                redirect: "follow"
             }
         ).then(response => response.json()).then(d => {
             this.setState({data: d})
@@ -30,7 +31,7 @@ class ComponentViewer extends React.Component {
                 <h1>Devices</h1>
                 <div className="containerView blog-shadow-dreamy">
                     {
-                        data["containers"].map(v => <Container data={v}/>)
+                        data["containers"].map(v => <Container name={v.name} text={v.text} list={v.list}/>)
                     }
                 </div>
             </div>
