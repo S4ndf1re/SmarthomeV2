@@ -91,7 +91,7 @@ func (script *ScriptDescriptor) registerObjects() {
 	_ = script.vm.Set("Button", script.Button)
 	_ = script.vm.Set("Checkbox", script.Checkbox)
 	_ = script.vm.Set("Alert", script.Alert)
-	_ = script.vm.Set("Textfield", script.Textfield)
+	_ = script.vm.Set("TextField", script.TextField)
 	_ = script.vm.Set("Data", script.Data)
 
 }
@@ -274,9 +274,9 @@ func (script *ScriptDescriptor) Checkbox(call goja.ConstructorCall) *goja.Object
 	return nil
 }
 
-// Textfield is the javascript constructor for gui.Textfield.
+// Textfield is the javascript constructor for gui.TextField.
 // Three arguments are required: name string, text string, onChange func(string, string)
-func (script *ScriptDescriptor) Textfield(call goja.ConstructorCall) *goja.Object {
+func (script *ScriptDescriptor) TextField(call goja.ConstructorCall) *goja.Object {
 	if len(call.Arguments) == 3 {
 		var name string
 		var text string
@@ -290,8 +290,8 @@ func (script *ScriptDescriptor) Textfield(call goja.ConstructorCall) *goja.Objec
 		if err := script.vm.ExportTo(call.Argument(2), &onChange); err != nil {
 			return nil
 		}
-		textfield := gui.NewTextfield(name, text, onChange)
-		instance := script.vm.ToValue(textfield).(*goja.Object)
+		textField := gui.NewTextField(name, text, onChange)
+		instance := script.vm.ToValue(textField).(*goja.Object)
 		_ = instance.SetPrototype(call.This.Prototype())
 		return instance
 	}

@@ -1,6 +1,7 @@
 package gui
 
 import (
+	"Smarthome/util"
 	"net/http"
 	"sync"
 )
@@ -35,37 +36,36 @@ func (container *Container) Add(child Child) {
 	container.List = append(container.List, child)
 }
 
+func (container *Container) handleOnInitRequest(username string, _ http.ResponseWriter, _ *http.Request) {
+	container.onInit(username)
+}
+
 // AddToGui adds the container and all its children to the *Gui
 func (container *Container) AddToGui(mount string, gui *Gui) {
 	container.mutex.Lock()
 	defer container.mutex.Unlock()
-	newMount := mount + container.Name + "/"
+	newMount := mount + container.Name + pathSeparator
 
 	for _, child := range container.List {
 		child.AddToGui(newMount, gui)
 	}
 
-	container.OnInitRequest = mount + container.Name + "/container/init"
-
-	_ = gui.addURLFunc(container.OnInitRequest, func(w http.ResponseWriter, r *http.Request) {
-		username, err := gui.AuthorizeOrRedirect(w, r)
-		if err != nil {
-			return
-		}
-		container.onInit(username)
-	})
+	container.OnInitRequest = mount + container.Name + containerInitPath
+	err := gui.addURLFunc(container.OnInitRequest, gui.AuthorizeOrRedirect(container.handleOnInitRequest))
+	util.LogIfErr("Container.AddToGui()", err)
 }
 
 // RemoveFromGui removes the container and all its children from the *Gui
 func (container *Container) RemoveFromGui(mount string, gui *Gui) {
 	container.mutex.Lock()
 	defer container.mutex.Unlock()
-	newMount := mount + container.Name + "/"
+	newMount := mount + container.Name + pathSeparator
 
 	for _, child := range container.List {
 		child.RemoveFromGui(newMount, gui)
 	}
 
-	container.OnInitRequest = mount + container.Name + "/container/init"
-	_ = gui.removeURLFunc(container.OnInitRequest)
+	container.OnInitRequest = mount + container.Name + containerInitPath
+	err := gui.removeURLFunc(container.OnInitRequest)
+	util.LogIfErr("Container.RemoveFromGui()", err)
 }

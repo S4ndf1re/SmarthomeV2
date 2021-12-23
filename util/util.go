@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"github.com/dop251/goja"
+	"log"
 	"math/rand"
 	"time"
 )
@@ -51,4 +52,10 @@ func RandomBase64Bytes(n int) string {
 		data[i] = byte(RandomInt(0, 255))
 	}
 	return base64.StdEncoding.EncodeToString(data)
+}
+
+func LogIfErr(functionName string, err error) {
+	if err != nil {
+		log.Printf("%s: %s\n", functionName, err)
+	}
 }

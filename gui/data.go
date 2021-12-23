@@ -26,13 +26,13 @@ func NewData(name string, initialData Child) *Data {
 	data.data = initialData
 	data.mutex = sync.Mutex{}
 	data.updateFunctions = make(map[string]func(Child))
-	data.GuiType = "gui.Data"
+	data.GuiType = DataType
 	return data
 }
 
 // Type returns the type "gui.Data"
 func (data *Data) Type() string {
-	return "gui.Data"
+	return data.GuiType
 }
 
 // Update can be called to update the underlying Child data.
@@ -74,82 +74,77 @@ func (data *Data) removeUpdateFunction(ident string) {
 }
 
 // handleRequest handles the simple get request on the *Data
-func (data *Data) handleRequest(gui *Gui) func(http.ResponseWriter, *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		data.mutex.Lock()
-		defer data.mutex.Unlock()
-		_, err := gui.AuthorizeOrRedirect(w, r)
-		if err != nil {
-			return
-		}
+func (data *Data) handleRequest(_ string, w http.ResponseWriter, _ *http.Request) {
+	data.mutex.Lock()
+	defer data.mutex.Unlock()
 
-		buffer, err := json.Marshal(data.data)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+	buffer, err := json.Marshal(data.data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
-		if _, err = w.Write(buffer); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+	if _, err = w.Write(buffer); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 }
 
 // handleSocket handles all websocket requests to *Data
-func (data *Data) handleSocket(gui *Gui) func(http.ResponseWriter, *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		_, err := gui.AuthorizeOrRedirect(w, r)
+func (data *Data) handleSocket(_ string, w http.ResponseWriter, r *http.Request) {
+	upgrader := websocket.Upgrader{}
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	updateCallback := func(child Child) {
+		buffer, err := json.Marshal(data.data)
 		if err != nil {
 			return
 		}
 
-		upgrader := websocket.Upgrader{}
-		conn, err := upgrader.Upgrade(w, r, nil)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+		if err = conn.WriteMessage(websocket.TextMessage, buffer); err != nil {
 			return
 		}
+	}
 
-		updateCallback := func(child Child) {
-			buffer, err := json.Marshal(data.data)
-			if err != nil {
-				return
-			}
+	callbackHandle := data.addUpdateFunction(updateCallback)
+	defer data.removeUpdateFunction(callbackHandle)
 
-			if err = conn.WriteMessage(websocket.TextMessage, buffer); err != nil {
-				return
-			}
+	// Block until close
+	for {
+		messageType, _, err := conn.ReadMessage()
+		if err != nil {
+			break
 		}
-
-		callbackHandle := data.addUpdateFunction(updateCallback)
-		defer data.removeUpdateFunction(callbackHandle)
-
-		// Block until close
-		for {
-			messageType, _, err := conn.ReadMessage()
-			if err != nil {
-				break
-			}
-			if messageType == websocket.CloseMessage {
-				break
-			}
+		if messageType == websocket.CloseMessage {
+			break
 		}
 	}
 }
 
 // AddToGui registers both websocket and get request handlers to the *Gui
 func (data *Data) AddToGui(mount string, gui *Gui) {
-	data.UpdateRequest = mount + data.Name + "/data/request"
-	data.UpdateSocket = mount + data.Name + "/data/socket"
-	_ = gui.addURLFunc(data.UpdateRequest, data.handleRequest(gui))
-	_ = gui.addURLFunc(data.UpdateSocket, data.handleSocket(gui))
+	data.UpdateRequest = mount + data.Name + dataRequestPath
+	data.UpdateSocket = mount + data.Name + dataSocketPath
+
+	err := gui.addURLFunc(data.UpdateRequest, gui.AuthorizeOrRedirect(data.handleRequest))
+	util.LogIfErr("Data.AddToGui()", err)
+
+	err = gui.addURLFunc(data.UpdateSocket, gui.AuthorizeOrRedirect(data.handleSocket))
+	util.LogIfErr("Data.AddToGui()", err)
 }
 
 // RemoveFromGui removes all registered handlers from the *Gui
 func (data *Data) RemoveFromGui(mount string, gui *Gui) {
-	data.UpdateRequest = mount + data.Name + "/data/request"
-	data.UpdateSocket = mount + data.Name + "/data/socket"
-	_ = gui.removeURLFunc(data.UpdateRequest)
-	_ = gui.removeURLFunc(data.UpdateSocket)
+	data.UpdateRequest = mount + data.Name + dataRequestPath
+	data.UpdateSocket = mount + data.Name + dataSocketPath
+
+	err := gui.removeURLFunc(data.UpdateRequest)
+	util.LogIfErr("Data.RemoveFromGui()", err)
+
+	err = gui.removeURLFunc(data.UpdateSocket)
+	util.LogIfErr("Data.RemoveFromGui()", err)
 }

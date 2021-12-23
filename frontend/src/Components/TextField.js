@@ -1,7 +1,7 @@
 import '../css/Textfield.css'
 import '../css/ComponentPage.css'
 import '../css/shadow.css'
-import '../css/index.css'
+import '../index.css'
 import React from 'react'
 
 class TextField extends React.Component {

@@ -12,13 +12,13 @@ func NewAlert(name, message string) *Alert {
 	alert := new(Alert)
 	alert.Name = name
 	alert.Message = message
-	alert.GuiType = "gui.Alert"
+	alert.GuiType = AlertType
 
 	return alert
 }
 
 func (alert *Alert) Type() string {
-	return "gui.Alert"
+	return alert.GuiType
 }
 
 // AddToGui stub

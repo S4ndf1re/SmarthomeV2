@@ -1,10 +1,33 @@
 package gui
 
 import (
-	"fmt"
+	"Smarthome/util"
+	"encoding/json"
 	"net/http"
 	"sync"
 )
+
+const (
+	checkboxOnOnState  = "/onstate/click"
+	checkboxOnOffState = "/offstate/click"
+	checkboxOnGetState = "/state/get"
+)
+
+type status struct {
+	Status bool `json:"status"`
+}
+
+func (status status) writeToHttpWriter(w http.ResponseWriter) error {
+	data, err := json.Marshal(status)
+	if err != nil {
+		return err
+	}
+
+	if _, err = w.Write(data); err != nil {
+		return err
+	}
+	return nil
+}
 
 // Checkbox is a simple On/Off State Checkbox with state change handlers
 type Checkbox struct {
@@ -31,7 +54,7 @@ func NewCheckbox(name, text string) *Checkbox {
 	checkbox.OnGetStateRequest = ""
 	checkbox.OnOffStateRequest = ""
 	checkbox.OnOnStateRequest = ""
-	checkbox.GuiType = "gui.Checkbox"
+	checkbox.GuiType = CheckboxType
 
 	checkbox.getCurrent = func(user string) bool { return checkbox.state }
 	checkbox.onOffState = func(user string) { checkbox.state = false }
@@ -78,54 +101,63 @@ func (checkbox *Checkbox) DefaultListeners() (func(string), func(string), func(s
 		}
 }
 
+func (checkbox *Checkbox) writeToHttpWriter(username string, w http.ResponseWriter) {
+	err := status{Status: checkbox.getCurrent(username)}.writeToHttpWriter(w)
+	util.LogIfErr("handleOnStateClick()", err)
+}
+
+func (checkbox *Checkbox) handleOnStateClick(username string, w http.ResponseWriter, _ *http.Request) {
+	checkbox.mutex.Lock()
+	defer checkbox.mutex.Unlock()
+
+	checkbox.onOnState(username)
+	checkbox.onChange(username, checkbox.getCurrent(username))
+	checkbox.writeToHttpWriter(username, w)
+}
+
+func (checkbox *Checkbox) handleOffStateClick(username string, w http.ResponseWriter, _ *http.Request) {
+	checkbox.mutex.Lock()
+	defer checkbox.mutex.Unlock()
+
+	checkbox.onOffState(username)
+	checkbox.onChange(username, checkbox.getCurrent(username))
+	checkbox.writeToHttpWriter(username, w)
+}
+
+func (checkbox *Checkbox) handleGetRequest(username string, w http.ResponseWriter, _ *http.Request) {
+	checkbox.mutex.Lock()
+	defer checkbox.mutex.Unlock()
+
+	checkbox.writeToHttpWriter(username, w)
+}
+
 // AddToGui adds all listeners an function callbacks to the *Gui
 func (checkbox *Checkbox) AddToGui(mount string, gui *Gui) {
-	checkbox.OnOnStateRequest = mount + checkbox.Name + "/onstate/click"
-	_ = gui.addURLFunc(checkbox.OnOnStateRequest, func(w http.ResponseWriter, r *http.Request) {
-		checkbox.mutex.Lock()
-		defer checkbox.mutex.Unlock()
-		username, err := gui.AuthorizeOrRedirect(w, r)
-		if err != nil {
-			return
-		}
-		checkbox.onOnState(username)
-		checkbox.onChange(username, checkbox.getCurrent(username))
-		_, _ = w.Write([]byte(fmt.Sprintf("{ \"status\": %t }", checkbox.getCurrent(username))))
-	})
+	checkbox.OnOnStateRequest = mount + checkbox.Name + checkboxOnOnState
+	err := gui.addURLFunc(checkbox.OnOnStateRequest, gui.AuthorizeOrRedirect(checkbox.handleOnStateClick))
+	util.LogIfErr("Checkbox.AddToGui()", err)
 
-	checkbox.OnOffStateRequest = mount + checkbox.Name + "/offstate/click"
-	_ = gui.addURLFunc(checkbox.OnOffStateRequest, func(w http.ResponseWriter, r *http.Request) {
-		checkbox.mutex.Lock()
-		defer checkbox.mutex.Unlock()
-		username, err := gui.AuthorizeOrRedirect(w, r)
-		if err != nil {
-			return
-		}
-		checkbox.onOffState(username)
-		checkbox.onChange(username, checkbox.getCurrent(username))
-		_, _ = w.Write([]byte(fmt.Sprintf("{ \"status\": %t }", checkbox.getCurrent(username))))
-	})
+	checkbox.OnOffStateRequest = mount + checkbox.Name + checkboxOnOffState
+	err = gui.addURLFunc(checkbox.OnOffStateRequest, gui.AuthorizeOrRedirect(checkbox.handleOffStateClick))
+	util.LogIfErr("Checkbox.AddToGui()", err)
 
-	checkbox.OnGetStateRequest = mount + checkbox.Name + "/state/get"
-	_ = gui.addURLFunc(checkbox.OnGetStateRequest, func(w http.ResponseWriter, r *http.Request) {
-		checkbox.mutex.Lock()
-		defer checkbox.mutex.Unlock()
-		username, err := gui.AuthorizeOrRedirect(w, r)
-		if err != nil {
-			return
-		}
-		checkbox.getCurrent(username)
-		_, _ = w.Write([]byte(fmt.Sprintf("{ \"status\": %t }", checkbox.getCurrent(username))))
-	})
+	checkbox.OnGetStateRequest = mount + checkbox.Name + checkboxOnGetState
+	err = gui.addURLFunc(checkbox.OnOffStateRequest, gui.AuthorizeOrRedirect(checkbox.handleGetRequest))
+	util.LogIfErr("Checkbox.AddToGui()", err)
 }
 
 // RemoveFromGui removes all handlers from the *Gui
 func (checkbox *Checkbox) RemoveFromGui(mount string, gui *Gui) {
-	checkbox.OnOnStateRequest = mount + checkbox.Name + "/onstate/click"
-	checkbox.OnOffStateRequest = mount + checkbox.Name + "/offstate/click"
-	checkbox.OnGetStateRequest = mount + checkbox.Name + "/state/get"
+	checkbox.OnOnStateRequest = mount + checkbox.Name + checkboxOnOnState
+	checkbox.OnOffStateRequest = mount + checkbox.Name + checkboxOnOffState
+	checkbox.OnGetStateRequest = mount + checkbox.Name + checkboxOnGetState
 
-	_ = gui.removeURLFunc(checkbox.OnOnStateRequest)
-	_ = gui.removeURLFunc(checkbox.OnOffStateRequest)
-	_ = gui.removeURLFunc(checkbox.OnGetStateRequest)
+	err := gui.removeURLFunc(checkbox.OnOnStateRequest)
+	util.LogIfErr("Checkbox.RemoveFromGui()", err)
+
+	err = gui.removeURLFunc(checkbox.OnOffStateRequest)
+	util.LogIfErr("Checkbox.RemoveFromGui()", err)
+
+	err = gui.removeURLFunc(checkbox.OnGetStateRequest)
+	util.LogIfErr("Checkbox.RemoveFromGui()", err)
 }

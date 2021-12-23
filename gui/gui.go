@@ -1,20 +1,14 @@
 package gui
 
 import (
+	"Smarthome/util"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/gorilla/sessions"
-	"log"
 	"net/http"
 	"os"
 	"sync"
-)
-
-const (
-	sessionLogin    = "session_login"
-	sessionUsername = "username"
-	sessionPassword = "password"
 )
 
 // Gui represents a web ui
@@ -30,9 +24,9 @@ func NewGui() *Gui {
 	gui := new(Gui)
 	gui.Containers = make([]*Container, 0)
 	gui.urlList = make(map[string]func(w http.ResponseWriter, r *http.Request))
-	gui.cookieStore = sessions.NewCookieStore([]byte(os.Getenv("COOKIE_KEY")))
+	gui.cookieStore = sessions.NewCookieStore([]byte(os.Getenv(sessionEnvKey)))
 	gui.setupLogin()
-	_ = gui.addURLFunc("/gui", gui.GuiHandle)
+	_ = gui.addURLFunc(guiPath, gui.AuthorizeOrRedirect(gui.GuiHandle))
 	gui.mutex = sync.Mutex{}
 	return gui
 }
@@ -75,7 +69,7 @@ func (gui *Gui) getURLFunc(path string) (func(w http.ResponseWriter, r *http.Req
 func (gui *Gui) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	callbackFunction, err := gui.getURLFunc(r.URL.Path)
 	if err != nil {
-		gui.HandleRoot(w, r)
+		gui.AuthorizeOrRedirect(gui.HandleRoot)
 		return
 	}
 	callbackFunction(w, r)
@@ -85,7 +79,7 @@ func (gui *Gui) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // It also registers all components to the handler
 func (gui *Gui) AddContainer(container *Container) {
 	gui.Containers = append(gui.Containers, container)
-	container.AddToGui("/api/", gui)
+	container.AddToGui(apiMountPath, gui)
 }
 
 // RemoveContainer removes the [container] from the gui container list.
@@ -100,7 +94,7 @@ func (gui *Gui) RemoveContainer(container *Container) {
 	}
 
 	if foundIdx >= 0 {
-		gui.Containers[foundIdx].RemoveFromGui("/api/", gui)
+		gui.Containers[foundIdx].RemoveFromGui(apiMountPath, gui)
 		gui.Containers = append(gui.Containers[:foundIdx], gui.Containers[foundIdx+1:]...)
 	}
 }
@@ -108,74 +102,75 @@ func (gui *Gui) RemoveContainer(container *Container) {
 // AuthorizeOrRedirect tries to authorize the user session. If successful, the username and a nil error is returned.
 // If the authorization is unsuccessful, the request is redirected to /login. An error is returned. After redirection (err != nil)
 // The response should not get rewritten
-func (gui *Gui) AuthorizeOrRedirect(w http.ResponseWriter, r *http.Request) (string, error) {
-	session, _ := gui.cookieStore.Get(r, sessionLogin)
-	usernameInterface, ok := session.Values[sessionUsername]
-	if !ok {
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
-		return "", fmt.Errorf("no username found. Redirecting to /login")
-	}
-	if username, ok := usernameInterface.(string); ok {
-		return username, nil
-	} else {
-		return "", fmt.Errorf("cookie does not contain string")
+func (gui *Gui) AuthorizeOrRedirect(callIfAuthorized func(string, http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		session, _ := gui.cookieStore.Get(r, sessionLogin)
+		usernameInterface, ok := session.Values[sessionUsername]
+
+		if !ok {
+			http.Redirect(w, r, loginPath, http.StatusSeeOther)
+			return
+		}
+
+		session.Options.MaxAge = sessionKeepAlive
+		_ = session.Save(r, w)
+
+		if username, ok := usernameInterface.(string); ok {
+			callIfAuthorized(username, w, r)
+		}
 	}
 }
 
 // setupLogin registers all login utility as well as logout
 func (gui *Gui) setupLogin() {
-	if err := gui.addURLFunc("/util/login", gui.LoginApi); err != nil {
-		log.Printf("setupLogin(): %s\n", err)
-	}
-	if err := gui.addURLFunc("/login", gui.Login); err != nil {
-		log.Printf("setupLogin(): %s\n", err)
-	}
-	if err := gui.addURLFunc("/logout", gui.Logout); err != nil {
-		log.Printf("setupLogin(): %s\n", err)
-	}
+	err := gui.addURLFunc(loginApiPath, gui.LoginApi)
+	util.LogIfErr("Gui.setupLogin()", err)
+
+	err = gui.addURLFunc(loginPath, gui.Login)
+	util.LogIfErr("Gui.setupLogin()", err)
+
+	err = gui.addURLFunc(logoutPath, gui.Logout)
+	util.LogIfErr("Gui.setupLogin()", err)
 }
 
 // LoginApi logs in the user with the login form
 func (gui *Gui) LoginApi(w http.ResponseWriter, r *http.Request) {
 	session, _ := gui.cookieStore.Get(r, sessionLogin)
 	if err := r.ParseForm(); err != nil {
-		log.Printf("Login(): %s\n", err)
+		util.LogIfErr("Gui.Login()", err)
 		return
 	}
 
 	session.Values[sessionUsername] = r.PostForm.Get(sessionUsername)
 	session.Values[sessionPassword] = r.PostForm.Get(sessionPassword)
 
+	session.Options.MaxAge = sessionKeepAlive
 	if err := session.Save(r, w); err != nil {
-		log.Printf("Login(): %s\n", err)
+		util.LogIfErr("Gui.Login()", err)
 		return
 	}
 
-	http.Redirect(w, r, "/", http.StatusFound)
+	http.Redirect(w, r, emptyPath, http.StatusFound)
 }
 
 // Login serves the login page
 func (gui *Gui) Login(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "html/login.html")
+	http.ServeFile(w, r, loginPagePath)
 }
 
 // Logout removes the existing user session
 func (gui *Gui) Logout(w http.ResponseWriter, r *http.Request) {
 	session, _ := gui.cookieStore.Get(r, sessionLogin)
-	session.Options.MaxAge = -1
+	session.Options.MaxAge = sessionDelete
 	if err := session.Save(r, w); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
-	http.Redirect(w, r, "/login", http.StatusFound)
+	http.Redirect(w, r, loginPath, http.StatusFound)
 }
 
 // GuiHandle handles the /gui requests. It serves the *Gui as json
-func (gui *Gui) GuiHandle(w http.ResponseWriter, r *http.Request) {
-
-	if _, err := gui.AuthorizeOrRedirect(w, r); err != nil {
-		return
-	}
-
+func (gui *Gui) GuiHandle(_ string, w http.ResponseWriter, _ *http.Request) {
 	data, err := json.Marshal(gui)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -188,9 +183,6 @@ func (gui *Gui) GuiHandle(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleRoot handles all other requests that may be part of the /html folder
-func (gui *Gui) HandleRoot(w http.ResponseWriter, r *http.Request) {
-	if _, err := gui.AuthorizeOrRedirect(w, r); err != nil {
-		return
-	}
-	http.FileServer(http.Dir("html/")).ServeHTTP(w, r)
+func (gui *Gui) HandleRoot(_ string, w http.ResponseWriter, r *http.Request) {
+	http.FileServer(http.Dir(fileServeDirectory)).ServeHTTP(w, r)
 }

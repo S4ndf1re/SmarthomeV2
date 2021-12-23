@@ -1,7 +1,7 @@
 package gui
 
 import (
-	"log"
+	"Smarthome/util"
 	"net/http"
 )
 
@@ -21,7 +21,7 @@ func NewButton(name, text string, onClick func(user string)) *Button {
 	button.Text = text
 	button.OnClickRequest = ""
 	button.onClick = onClick
-	button.GuiType = "gui.Button"
+	button.GuiType = ButtonType
 	return button
 }
 
@@ -30,23 +30,20 @@ func (btn *Button) Type() string {
 	return btn.GuiType
 }
 
+func (btn *Button) handleOnClick(username string, _ http.ResponseWriter, _ *http.Request) {
+	btn.onClick(username)
+}
+
 // AddToGui registers the Button onClick callback to the *Gui
 func (btn *Button) AddToGui(mount string, gui *Gui) {
-	btn.OnClickRequest = mount + btn.Name + "/button/click"
-	_ = gui.addURLFunc(btn.OnClickRequest, func(w http.ResponseWriter, r *http.Request) {
-		username, err := gui.AuthorizeOrRedirect(w, r)
-		if err != nil {
-			log.Printf("Button.AddToGui: %s\n", err)
-			return
-		}
-		btn.onClick(username)
-	})
+	btn.OnClickRequest = mount + btn.Name + buttonOnClickExtension
+	err := gui.addURLFunc(btn.OnClickRequest, gui.AuthorizeOrRedirect(btn.handleOnClick))
+	util.LogIfErr("Button.AddToGui()", err)
 }
 
 // RemoveFromGui removes all handlers from the *Gui
 func (btn *Button) RemoveFromGui(mount string, gui *Gui) {
-	removePath := mount + btn.Name + "/button/click"
-	if err := gui.removeURLFunc(removePath); err != nil {
-		log.Printf("Button.RemoveFromGui(): %s\n", err)
-	}
+	btn.OnClickRequest = mount + btn.Name + buttonOnClickExtension
+	err := gui.removeURLFunc(btn.OnClickRequest)
+	util.LogIfErr("Button.RemoveFromGui()", err)
 }

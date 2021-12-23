@@ -48,8 +48,10 @@ function createContainer(espObj) {
         espObj.mode = mode.idle
         data.Update(new Alert("doorlock" + espObj.id + "alert", "Changed to IDLE"))
     })
-    let textinput = new Textfield("doorlock" + espObj.id + "input", "Input", (user, text) => {
-        Print("User: " + user + "    " + "Text: " + text)
+
+    let check1 = new Checkbox("check1", "Check Me")
+    check1.SetChangeCallback((username, state) => {
+        Print(username + ": " + state)
     })
 
     let data = new Data("doorlock" + espObj.id + "data", new Alert("doorlock" + espObj.id + "alert", ""))
@@ -58,7 +60,7 @@ function createContainer(espObj) {
     espObj.container.Add(btnCheck)
     espObj.container.Add(btnAuth)
     espObj.container.Add(btnIdle)
-    espObj.container.Add(textinput)
+    espObj.container.Add(check1)
     espObj.container.Add(data)
 }
 
@@ -97,8 +99,6 @@ function statusHandle(topic, payload) {
     let tokens = topic.split('/')
     let id = tokens[1]
     let status = payload !== "false";
-    //Print("" + doorlocks.get(id))
-    Print("Received: " + topic + " Data: " + payload)
     addIfNotExists(id, false)
     setStatus(doorlocks.get(id), status)
 }
