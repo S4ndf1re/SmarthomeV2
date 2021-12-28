@@ -1,7 +1,6 @@
-import '../css/Textfield.css'
 import '../css/ComponentPage.css'
 import '../css/shadow.css'
-import '../index.css'
+import MuiTextField from "@mui/material/TextField"
 import React from 'react'
 
 class TextField extends React.Component {
@@ -12,7 +11,8 @@ class TextField extends React.Component {
             updateRequest: props.updateRequest,
             name: props.name,
             text: props.text,
-            checked: false
+            checked: false,
+            content: ""
         }
     }
 
@@ -22,18 +22,17 @@ class TextField extends React.Component {
 
     render() {
         return (
-            <div className="textfieldClass default-margin default-padding blog-shadow-dreamy">
-                <label className="defaultFont" htmlFor={this.getID()}>{this.state.text}</label>
-                <input id={this.getID()} onChange={(key) => this.clickEvent(key)}
-                       className="textInputClass defaultFont"/>
+            <div className="default-align default-margin default-padding">
+                <MuiTextField id={this.getID()} value={this.state.content} onChange={(event) => this.clickEvent(event)}
+                              label={this.state.text} variant="filled"
+                              fullWidth/>
             </div>
         )
     }
 
-    clickEvent(key) {
-        console.log(key)
-        let b = document.getElementById(this.getID()).value
-        let c = JSON.stringify({text: b})
+    clickEvent(event) {
+        let value = event.target.value
+        let valueJson = JSON.stringify({text: value})
         window.fetch(this.state.updateRequest, {
             method: 'POST',
             mode: 'cors',
@@ -44,8 +43,9 @@ class TextField extends React.Component {
             },
             redirect: 'follow',
             referrerPolicy: "no-referrer",
-            body: c
+            body: valueJson
         });
+        this.setState({content: value})
     }
 }
 

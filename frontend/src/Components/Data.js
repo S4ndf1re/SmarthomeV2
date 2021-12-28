@@ -1,4 +1,3 @@
-import '../css/Button.css'
 import '../css/ComponentPage.css'
 import '../css/shadow.css'
 import React from 'react'
@@ -13,12 +12,14 @@ class Data extends React.Component {
             name: props.name,
             ws: null,
             child: null,
+            noReconnect: false,
             updateRequest: props.updateRequest,
             updateSocket: props.updateSocket
         }
     }
 
     componentDidMount() {
+        this.setState({noReconnect: true})
         this.connect()
 
         fetch(this.state.updateRequest, {
@@ -28,11 +29,21 @@ class Data extends React.Component {
         })
     }
 
+    componentWillUnmount() {
+        if (this.state.ws !== null) {
+            this.setState({noReconnect: false})
+            this.state.ws.close()
+        }
+    }
+
     /**
      * @function connect
      * This function establishes the connect with the websocket and also ensures constant reconnection if connection closes
      */
     connect = () => {
+        if (this.state.noReconnect) {
+            return
+        }
         let ws = new WebSocket("ws://" + window.location.host + this.state.updateSocket);
         let that = this; // cache the this
         let connectInterval;

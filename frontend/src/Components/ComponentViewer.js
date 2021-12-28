@@ -19,7 +19,13 @@ class ComponentViewer extends React.Component {
                 credentials: "include",
                 redirect: "follow"
             }
-        ).then(response => response.json()).then(d => {
+        ).then(response => {
+            if (response.redirected) {
+                window.location.href = "/login"
+            } else {
+                return response.json()
+            }
+        }).then(d => {
             this.setState({data: d})
         })
     }

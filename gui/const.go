@@ -48,3 +48,10 @@ const (
 const (
 	textFieldTextInputRequest = "/textfield/input"
 )
+
+// Checkbox constants
+const (
+	checkboxOnOnState  = "/onstate/click"
+	checkboxOnOffState = "/offstate/click"
+	checkboxOnGetState = "/state/get"
+)

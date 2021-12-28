@@ -301,16 +301,20 @@ func (script *ScriptDescriptor) TextField(call goja.ConstructorCall) *goja.Objec
 // Alert is the javascript constructor for gui.Alert.
 // Two arguments are required: name string and message string
 func (script *ScriptDescriptor) Alert(call goja.ConstructorCall) *goja.Object {
-	if len(call.Arguments) == 2 {
+	if len(call.Arguments) == 3 {
 		var name string
 		var message string
+		var severity string
 		if err := script.vm.ExportTo(call.Argument(0), &name); err != nil {
 			return nil
 		}
 		if err := script.vm.ExportTo(call.Argument(1), &message); err != nil {
 			return nil
 		}
-		alert := gui.NewAlert(name, message)
+		if err := script.vm.ExportTo(call.Argument(2), &severity); err != nil {
+			return nil
+		}
+		alert := gui.NewAlert(name, message, severity)
 		instance := script.vm.ToValue(alert).(*goja.Object)
 		_ = instance.SetPrototype(call.This.Prototype())
 		return instance

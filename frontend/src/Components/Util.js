@@ -20,7 +20,7 @@ function getComponentForType(state) {
         return <Data key={state.name} name={state.name} updateRequest={state.updateRequest}
                      updateSocket={state.updateSocket}/>
     } else if (state.type === "gui.Alert") {
-        return <Alert key={state.name} name={state.name} message={state.message}/>
+        return <Alert key={state.name} name={state.name} message={state.message} severity={state.severity}/>
     }
 }
 

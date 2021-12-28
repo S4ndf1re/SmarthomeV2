@@ -7,12 +7,6 @@ import (
 	"sync"
 )
 
-const (
-	checkboxOnOnState  = "/onstate/click"
-	checkboxOnOffState = "/offstate/click"
-	checkboxOnGetState = "/state/get"
-)
-
 type status struct {
 	Status bool `json:"status"`
 }
@@ -142,7 +136,7 @@ func (checkbox *Checkbox) AddToGui(mount string, gui *Gui) {
 	util.LogIfErr("Checkbox.AddToGui()", err)
 
 	checkbox.OnGetStateRequest = mount + checkbox.Name + checkboxOnGetState
-	err = gui.addURLFunc(checkbox.OnOffStateRequest, gui.AuthorizeOrRedirect(checkbox.handleGetRequest))
+	err = gui.addURLFunc(checkbox.OnGetStateRequest, gui.AuthorizeOrRedirect(checkbox.handleGetRequest))
 	util.LogIfErr("Checkbox.AddToGui()", err)
 }
 

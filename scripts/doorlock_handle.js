@@ -38,15 +38,24 @@ function createContainer(espObj) {
 
     let btnCheck = new Button("doorlock" + espObj.id + "check", "Check", (user) => {
         espObj.mode = mode.checking
-        data.Update(new Alert("doorlock" + espObj.id + "alert", "Changed to CHECK"))
+        data.Update(new Alert("doorlock" + espObj.id + "alert", "Changed to CHECK", "success"))
+        ExecuteAfterMs(20000, () => {
+            data.Update(new Alert("doorlock" + espObj.id + "alert", "", "success"))
+        })
     })
     let btnAuth = new Button("doorlock" + espObj.id + "auth", "Authenticate", (user) => {
         espObj.mode = mode.authentication
-        data.Update(new Alert("doorlock" + espObj.id + "alert", "Changed to AUTH"))
+        data.Update(new Alert("doorlock" + espObj.id + "alert", "Changed to AUTH", "success"))
+        ExecuteAfterMs(20000, () => {
+            data.Update(new Alert("doorlock" + espObj.id + "alert", "", "success"))
+        })
     })
     let btnIdle = new Button("doorlock" + espObj.id + "idle", "Idle", (user) => {
         espObj.mode = mode.idle
-        data.Update(new Alert("doorlock" + espObj.id + "alert", "Changed to IDLE"))
+        data.Update(new Alert("doorlock" + espObj.id + "alert", "Changed to IDLE", "info"))
+        ExecuteAfterMs(20000, () => {
+            data.Update(new Alert("doorlock" + espObj.id + "alert", "", "success"))
+        })
     })
 
     let check1 = new Checkbox("check1", "Check Me")
@@ -54,12 +63,17 @@ function createContainer(espObj) {
         Print(username + ": " + state)
     })
 
-    let data = new Data("doorlock" + espObj.id + "data", new Alert("doorlock" + espObj.id + "alert", ""))
+    let textfield = new TextField("text1", "Text", (user, text) => {
+        Print(user + ": " + text)
+    })
+
+    let data = new Data("doorlock" + espObj.id + "data", new Alert("doorlock" + espObj.id + "alert", "", "info"))
     espObj.data = data
 
     espObj.container.Add(btnCheck)
     espObj.container.Add(btnAuth)
     espObj.container.Add(btnIdle)
+    espObj.container.Add(textfield)
     espObj.container.Add(check1)
     espObj.container.Add(data)
 }
