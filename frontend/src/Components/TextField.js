@@ -24,7 +24,7 @@ class TextField extends React.Component {
         return (
             <div className="default-align default-margin default-padding">
                 <MuiTextField id={this.getID()} value={this.state.content} onChange={(event) => this.clickEvent(event)}
-                              label={this.state.text} variant="filled"
+                              label={this.state.text} variant="outlined"
                               fullWidth/>
             </div>
         )
