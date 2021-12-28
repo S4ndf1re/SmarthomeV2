@@ -12,6 +12,8 @@ import (
 type Data struct {
 	Name            string `json:"name"`
 	data            Child
+	dataMount       string
+	dataGui         *Gui
 	mutex           sync.Mutex
 	UpdateRequest   string `json:"updateRequest"`
 	UpdateSocket    string `json:"updateSocket"`
@@ -37,11 +39,16 @@ func (data *Data) Type() string {
 
 // Update can be called to update the underlying Child data.
 // After update, all updateFunctions are called. Hence all Websocket connections are updated
-// TODO(Jan): This may change to all websocket connections per user
 func (data *Data) Update(newData Child) {
 	data.mutex.Lock()
 	defer data.mutex.Unlock()
+	// Remove old paths. This line makes buttons etc clean up correctly
+	data.data.RemoveFromGui(data.dataMount, data.dataGui)
+
 	data.data = newData
+
+	// Add new paths to gui where data is registered. This makes buttons etc. work
+	data.data.AddToGui(data.dataMount, data.dataGui)
 	for _, f := range data.updateFunctions {
 		f(data.data)
 	}
@@ -135,6 +142,10 @@ func (data *Data) AddToGui(mount string, gui *Gui) {
 
 	err = gui.addURLFunc(data.UpdateSocket, gui.AuthorizeOrRedirect(data.handleSocket))
 	util.LogIfErr("Data.AddToGui()", err)
+
+	data.dataMount = mount
+	data.dataGui = gui
+	data.data.AddToGui(mount, gui)
 }
 
 // RemoveFromGui removes all registered handlers from the *Gui
@@ -147,4 +158,6 @@ func (data *Data) RemoveFromGui(mount string, gui *Gui) {
 
 	err = gui.removeURLFunc(data.UpdateSocket)
 	util.LogIfErr("Data.RemoveFromGui()", err)
+
+	data.data.RemoveFromGui(data.dataMount, data.dataGui)
 }
