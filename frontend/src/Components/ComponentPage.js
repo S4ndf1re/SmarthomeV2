@@ -12,7 +12,8 @@ class ComponentPage extends React.Component {
             name: props.name,
             text: props.text,
             list: props.list,
-            onInitRequest: props.onInitRequest
+            onInitRequest: props.onInitRequest,
+            onUnloadRequest: props.onUnloadRequest
         }
         this.components = []
         this.updateList()
@@ -27,6 +28,14 @@ class ComponentPage extends React.Component {
     componentDidMount() {
         this.updateList()
         window.fetch(this.state.onInitRequest, {
+                credentials: "include",
+                redirect: "follow"
+            }
+        ).catch(err => console.log(err))
+    }
+
+    componentWillUnmount() {
+        window.fetch(this.state.onUnloadRequest, {
                 credentials: "include",
                 redirect: "follow"
             }

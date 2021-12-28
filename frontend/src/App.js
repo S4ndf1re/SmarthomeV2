@@ -39,7 +39,8 @@ class App extends React.Component {
                 {
                     this.state.data.containers.map(v =>
                         <Route key={v.name} exact path={"/" + v.name}>
-                            <ComponentPage name={v.name} text={v.text} list={v.list} onInitRequest={v.onInitRequest}/>
+                            <ComponentPage name={v.name} text={v.text} list={v.list} onInitRequest={v.onInitRequest}
+                                           onUnloadRequest={v.onUnloadRequest}/>
                         </Route>
                     )
                 }
