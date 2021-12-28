@@ -1,7 +1,7 @@
-import '../css/Button.css'
-import '../css/ComponentPage.css'
-import '../css/shadow.css'
 import React from 'react'
+import MuiButton from '@mui/material/Button';
+import '../css/shadow.css'
+import '../css/ComponentPage.css'
 
 class Button extends React.Component {
 
@@ -16,8 +16,9 @@ class Button extends React.Component {
 
     render() {
         return (
-            <button className="buttonClass default-margin blog-shadow-dreamy default-padding"
-                    onClick={() => this.clickEvent()}>{this.state.text}</button>
+            <div className="default-align default-margin default-padding">
+                <MuiButton variant="outlined" onClick={() => this.clickEvent()}>{this.state.text}</MuiButton>
+            </div>
         )
     }
 

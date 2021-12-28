@@ -69,7 +69,8 @@ func (gui *Gui) getURLFunc(path string) (func(w http.ResponseWriter, r *http.Req
 func (gui *Gui) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	callbackFunction, err := gui.getURLFunc(r.URL.Path)
 	if err != nil {
-		gui.AuthorizeOrRedirect(gui.HandleRoot)
+
+		gui.HandleRoot(w, r)
 		return
 	}
 	callbackFunction(w, r)
@@ -114,6 +115,8 @@ func (gui *Gui) AuthorizeOrRedirect(callIfAuthorized func(string, http.ResponseW
 		}
 
 		session.Options.MaxAge = sessionKeepAlive
+		session.Options.MaxAge = sessionKeepAlive
+		session.Options.Secure = true
 		_ = session.Save(r, w)
 
 		if username, ok := usernameInterface.(string); ok {
@@ -146,6 +149,8 @@ func (gui *Gui) LoginApi(w http.ResponseWriter, r *http.Request) {
 	session.Values[sessionPassword] = r.PostForm.Get(sessionPassword)
 
 	session.Options.MaxAge = sessionKeepAlive
+	session.Options.Secure = true
+	session.Options.SameSite = http.SameSiteNoneMode
 	if err := session.Save(r, w); err != nil {
 		util.LogIfErr("Gui.Login()", err)
 		return
@@ -183,6 +188,6 @@ func (gui *Gui) GuiHandle(_ string, w http.ResponseWriter, _ *http.Request) {
 }
 
 // HandleRoot handles all other requests that may be part of the /html folder
-func (gui *Gui) HandleRoot(_ string, w http.ResponseWriter, r *http.Request) {
+func (gui *Gui) HandleRoot(w http.ResponseWriter, r *http.Request) {
 	http.FileServer(http.Dir(fileServeDirectory)).ServeHTTP(w, r)
 }

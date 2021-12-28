@@ -43,6 +43,7 @@ func RegisterToGojaVM(vm *goja.Runtime) {
 	_ = vm.Set("ByteArrayToString", ByteArrayToString)
 	_ = vm.Set("RandomInt", RandomInt)
 	_ = vm.Set("RandomBase64Bytes", RandomBase64Bytes)
+	_ = vm.Set("ExecuteAfterMs", ExecuteAfterMs)
 }
 
 // RandomBase64Bytes generates a byte slice with random values and transforms it to a base64 encoded string
@@ -58,4 +59,12 @@ func LogIfErr(functionName string, err error) {
 	if err != nil {
 		log.Printf("%s: %s\n", functionName, err)
 	}
+}
+
+func ExecuteAfterMs(ms uint, callback func()) {
+	go func() {
+		timer := time.NewTimer(time.Duration(ms) * time.Millisecond)
+		<-timer.C
+		callback()
+	}()
 }

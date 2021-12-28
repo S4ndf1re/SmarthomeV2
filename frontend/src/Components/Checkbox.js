@@ -1,7 +1,8 @@
-import '../css/Checkbox.css'
 import '../css/ComponentPage.css'
 import '../css/shadow.css'
 import React from 'react'
+import MuiCheckbox from '@mui/material/Switch'
+import {FormControlLabel, FormGroup} from "@mui/material";
 
 class Checkbox extends React.Component {
 
@@ -23,11 +24,12 @@ class Checkbox extends React.Component {
 
     render() {
         return (
-            <div className="checkboxClass default-margin default-padding blog-shadow-dreamy">
-                <input id={this.getID()} type="checkbox"
-                       onChange={() => this.clickEvent()}
-                       checked={this.state.checked}/>
-                <label htmlFor={this.getID()}>{this.state.text}</label>
+            <div className="default-align default-margin default-padding">
+                <FormGroup>
+                    <FormControlLabel
+                        control={<MuiCheckbox checked={this.state.checked} onChange={(evt) => this.clickEvent(evt)}/>}
+                        label={this.state.text}/>
+                </FormGroup>
             </div>
         )
     }
@@ -37,14 +39,14 @@ class Checkbox extends React.Component {
             credentials: "include",
             redirect: "follow"
         }).then(data => data.json()).then(data => {
-            document.getElementById(this.getID()).checked = data.status
-            this.setState({checked: data.status})
-        });
+                this.setState({checked: data.status})
+            }
+        );
     }
 
-    clickEvent() {
+    clickEvent(event) {
         let path = ""
-        if (!this.state.checked) {
+        if (event.target.checked) {
             path = this.state.onStateClick
         } else {
             path = this.state.offStateClick
@@ -53,7 +55,6 @@ class Checkbox extends React.Component {
             credentials: "include",
             redirect: "follow"
         }).then(data => data.json()).then(data => {
-            document.getElementById(this.getID()).checked = data.status
             this.setState({checked: data.status});
         });
     }
