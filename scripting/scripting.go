@@ -209,10 +209,11 @@ func (script *ScriptDescriptor) Close() {
 // Container is the javascript constructor call for the gui.Container.
 // Three constructor parameters are required: name string, text string and onInit func(string)
 func (script *ScriptDescriptor) Container(call goja.ConstructorCall) *goja.Object {
-	if len(call.Arguments) == 3 {
+	if len(call.Arguments) == 4 {
 		var name string
 		var text string
 		var onInit func(string)
+		var onUnload func(string)
 		if err := script.vm.ExportTo(call.Argument(0), &name); err != nil {
 			return nil
 		}
@@ -222,7 +223,10 @@ func (script *ScriptDescriptor) Container(call goja.ConstructorCall) *goja.Objec
 		if err := script.vm.ExportTo(call.Argument(2), &onInit); err != nil {
 			return nil
 		}
-		container := gui.NewContainer(script.Name+"/"+name, text, onInit)
+		if err := script.vm.ExportTo(call.Argument(3), &onUnload); err != nil {
+			return nil
+		}
+		container := gui.NewContainer(script.Name+"/"+name, text, onInit, onUnload)
 		instance := script.vm.ToValue(container).(*goja.Object)
 		_ = instance.SetPrototype(call.This.Prototype())
 		return instance
