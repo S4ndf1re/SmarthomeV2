@@ -1,6 +1,7 @@
 package gui
 
 import (
+	"Smarthome/user"
 	"Smarthome/util"
 	"encoding/json"
 	"errors"
@@ -137,6 +138,20 @@ func (gui *Gui) setupLogin() {
 	util.LogIfErr("Gui.setupLogin()", err)
 }
 
+func authorize(username, password string) (*user.User, error) {
+	refUser, err := user.Load(username)
+	if err != nil {
+		return nil, err
+	}
+
+	tryingUser := user.New(username, password)
+
+	if refUser.Equals(tryingUser) {
+		return refUser, nil
+	}
+	return nil, fmt.Errorf("password or username wrong")
+}
+
 // LoginApi logs in the user with the login form
 func (gui *Gui) LoginApi(w http.ResponseWriter, r *http.Request) {
 	session, _ := gui.cookieStore.Get(r, sessionLogin)
@@ -145,8 +160,17 @@ func (gui *Gui) LoginApi(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session.Values[sessionUsername] = r.PostForm.Get(sessionUsername)
-	session.Values[sessionPassword] = r.PostForm.Get(sessionPassword)
+	username := r.PostForm.Get(sessionUsername)
+	password := r.PostForm.Get(sessionPassword)
+
+	registeredUser, err := authorize(username, password)
+	if err != nil {
+		http.Redirect(w, r, loginPath, http.StatusFound)
+		return
+	}
+
+	session.Values[sessionUsername] = registeredUser.Name
+	session.Values[sessionPassword] = registeredUser.Password
 
 	session.Options.MaxAge = sessionKeepAlive
 	session.Options.Secure = true
