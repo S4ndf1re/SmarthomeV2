@@ -35,7 +35,8 @@ const (
 
 // Container constants
 const (
-	containerInitPath = "/container/init"
+	containerInitPath   = "/container/init"
+	containerUnloadPath = "/container/unload"
 )
 
 // Data constants
