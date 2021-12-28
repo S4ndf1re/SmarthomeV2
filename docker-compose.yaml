@@ -1,0 +1,14 @@
+version: "3"
+
+services:
+  go-backend:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - "vol_backend:/go/bin/scripts"
+      - "vol_scriptfiles:/go/bin/scriptfiles"
+
+volumes:
+  vol_backend: { }
+  vol_scriptfiles: { }
