@@ -8,7 +8,9 @@ services:
     volumes:
       - "vol_backend:/go/bin/scripts"
       - "vol_scriptfiles:/go/bin/scriptfiles"
+      - "vol_users:/go/bin/users"
 
 volumes:
   vol_backend: { }
   vol_scriptfiles: { }
+  vol_users: { }

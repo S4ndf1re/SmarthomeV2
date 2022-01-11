@@ -5,7 +5,7 @@ const (
 	sessionLogin       = "session_login"
 	sessionUsername    = "username"
 	sessionPassword    = "password"
-	sessionKeepAlive   = 300
+	sessionKeepAlive   = 8000
 	sessionEnvKey      = "COOKIE_KEY"
 	sessionDelete      = -1
 	emptyPath          = "/"

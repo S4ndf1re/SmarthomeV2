@@ -116,7 +116,6 @@ func (gui *Gui) AuthorizeOrRedirect(callIfAuthorized func(string, http.ResponseW
 		}
 
 		session.Options.MaxAge = sessionKeepAlive
-		session.Options.MaxAge = sessionKeepAlive
 		session.Options.Secure = true
 		_ = session.Save(r, w)
 
@@ -173,8 +172,8 @@ func (gui *Gui) LoginApi(w http.ResponseWriter, r *http.Request) {
 	session.Values[sessionPassword] = registeredUser.Password
 
 	session.Options.MaxAge = sessionKeepAlive
-	session.Options.Secure = true
-	session.Options.SameSite = http.SameSiteNoneMode
+	session.Options.Secure = false
+	session.Options.SameSite = http.SameSiteLaxMode
 	if err := session.Save(r, w); err != nil {
 		util.LogIfErr("Gui.Login()", err)
 		return

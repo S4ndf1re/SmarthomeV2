@@ -10,6 +10,7 @@ RUN go build -o /go/bin/smarthome
 COPY scripts /go/bin/scripts
 COPY scriptfiles /go/bin/scriptfiles
 COPY html /go/bin/html
+COPY users /go/bin/users
 
 WORKDIR /go/bin/
 EXPOSE 8080
