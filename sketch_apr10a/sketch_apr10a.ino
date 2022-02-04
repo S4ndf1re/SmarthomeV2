@@ -7,6 +7,8 @@
 
 #define RST_PIN 2
 #define SS_PIN 15
+#define BEEP_PIN 5
+#define PORTAL_PIN 0
 
 #define MAX_BYTES 48
 #define DEFAULT_BLOCK 4 // This will start at Sector 0, Block 0
@@ -54,8 +56,28 @@ void initRfidKey() {
 
 void setup() {
 
+  pinMode(PORTAL_PIN, INPUT);
+
+  pinMode(BEEP_PIN, OUTPUT);
+  digitalWrite(BEEP_PIN, HIGH);
+  delay(200);
+  digitalWrite(BEEP_PIN, LOW);
+
   Serial.begin(9600);
 
+
+
+  connect(true);
+
+
+  SPI.begin();
+  mfrc522.PCD_Init();
+
+  initRfidKey();
+}
+
+
+void connect(bool auto_connect) {
   // Try connect to wifi and or mqtt.
   char port[6] = "";
   WiFiManagerParameter mqtt_server("server", "mqtt server", config.server, 40);
@@ -68,8 +90,14 @@ void setup() {
   manager.addParameter(&mqtt_port);
   manager.addParameter(&mqtt_user);
   manager.addParameter(&mqtt_password);
-  auto result = manager.autoConnect("ConfigAP");
-  //auto result = manager.startConfigPortal();
+
+  
+    int result = 0;
+    if (auto_connect) {
+      result = manager.autoConnect("ConfigAP");
+    } else {
+      result = manager.startConfigPortal();
+    }
 
   config.port = atoi(mqtt_port.getValue());
   strcpy(config.server, mqtt_server.getValue());
@@ -116,14 +144,7 @@ void setup() {
   client->enableLastWillMessage("doorlock/" CHIP_ID "/status", "false", true);
   client->setMqttReconnectionAttemptDelay(5000);
   client->setWifiReconnectionAttemptDelay(60000);
-
-
-  SPI.begin();
-  mfrc522.PCD_Init();
-
-  initRfidKey();
 }
-
 
 bool reselect_card() {
   //-------------------------------------------------------
@@ -291,6 +312,10 @@ void rfidRead(byte* data, int size) {
 
 }
 
+void beepOff() {
+  digitalWrite(BEEP_PIN, LOW);
+}
+
 void rfidLoop() {
 
   if ( ! mfrc522.PICC_IsNewCardPresent()) {
@@ -322,9 +347,16 @@ void rfidLoop() {
   mfrc522.PICC_HaltA();
   // Stop encryption on PCD
   mfrc522.PCD_StopCrypto1();
+
+  digitalWrite(BEEP_PIN, HIGH);
+  client->executeDelayed(200, beepOff);
 }
 
 void loop() {
+
+  if(digitalRead(PORTAL_PIN) == LOW) {
+    connect(false);
+  }
 
   client->loop();
   rfidLoop();
