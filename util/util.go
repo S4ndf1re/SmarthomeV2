@@ -1,6 +1,7 @@
 package util
 
 import (
+	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"github.com/dop251/goja"
@@ -44,6 +45,8 @@ func RegisterToGojaVM(vm *goja.Runtime) {
 	_ = vm.Set("RandomInt", RandomInt)
 	_ = vm.Set("RandomBase64Bytes", RandomBase64Bytes)
 	_ = vm.Set("ExecuteAfterMs", ExecuteAfterMs)
+	_ = vm.Set("SHA256", SHA256)
+	_ = vm.Set("LaunchThread", LaunchThread)
 }
 
 // RandomBase64Bytes generates a byte slice with random values and transforms it to a base64 encoded string
@@ -67,4 +70,14 @@ func ExecuteAfterMs(ms uint, callback func()) {
 		<-timer.C
 		callback()
 	}()
+}
+
+func SHA256(buffer []byte) []byte {
+	sha := sha256.New()
+	sha.Write(buffer)
+	return sha.Sum(nil)
+}
+
+func LaunchThread(execution func()) {
+	go execution()
 }

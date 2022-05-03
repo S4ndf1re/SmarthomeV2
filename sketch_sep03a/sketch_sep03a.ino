@@ -3,15 +3,18 @@ serialRelayTest.ino
 */
 
 #include <WiFiManager.h>
+#include <ESP8266WiFi.h>
 #include <EEPROM.h>
-#include <EspMQTTClient.h>
+#include <PubSubClient.h>
 
+
+void reconnect_wifi();
 
 byte relON[] = {0xA0, 0x01, 0x01, 0xA2};
 byte relOFF[] = {0xA0, 0x01, 0x00, 0xA1};
 
 
-#define CHIP_ID "01"
+#define CHIP_ID "02"
 #define MAX_TIMEOUT 20000
 
 typedef struct {
@@ -21,30 +24,62 @@ typedef struct {
   int port = 0;
 } Config;
 
-EspMQTTClient *client = NULL;
-String ssid = "";
-String psk = "";
-String willTopic;
+WiFiClient espClient;
+PubSubClient client(espClient);
+
+String ssid = "<SSID>";
+String psk = "<PASSWORD>";
+
 Config config;
 
 WiFiManager manager;
 
-bool shouldSave = false;
 
-void onSaveCallback() {
-  shouldSave = true;
+
+void copy_byte_to_cstr(byte *from, int from_length, char* to, int to_length) {
+  if (from_length >= to_length) {
+    from_length = to_length - 1;
+  }
+
+  int i = 0;
+  for (i = 0; i < from_length; i++) {
+    to[i] = from[i];
+  }
+  to[i] = '\0';
 }
 
 
-void setup(void) {
-  Serial.begin(9600);
-  
-  Serial.write(relOFF, sizeof(relOFF));
-  delay(10);
-  Serial.write(relOFF, sizeof(relOFF));
+void onOpenDoor(char *topic, byte *payload, unsigned int length) {
+  char buffer[length+1];
+  copy_byte_to_cstr(payload, length, buffer, length+1);
+  Serial.print("Received: ");
+  Serial.println(buffer);
+  if(strcmp(buffer,"true") == 0) {
+    Serial.write(relON, sizeof(relON));
+    delay(3000);
+    Serial.write(relOFF, sizeof(relOFF));
+  }
+}
 
-  // Try connect to wifi and or mqtt.
-  char port[6] = "";
+void onConnectionEstablished() {
+  client.publish("doorlock/" CHIP_ID "/opener/status", "true", true);
+  client.subscribe("doorlock/" CHIP_ID "/open");
+}
+
+void callback(char *topic, byte* payload, unsigned int length) {
+
+  if (strcmp(topic, "doorlock/" CHIP_ID "/open") == 0) {
+    onOpenDoor(topic, payload, length);
+  }
+}
+
+
+
+
+
+void setup_wifi() {
+
+  /* char port[6] = "";
   WiFiManagerParameter mqtt_server("server", "mqtt server", config.server, 40);
   WiFiManagerParameter mqtt_password("password", "mqtt password", config.password, 40);
   WiFiManagerParameter mqtt_user("password", "mqtt user", config.password, 40);
@@ -58,65 +93,104 @@ void setup(void) {
   auto result = manager.autoConnect("ConfigAP");
 
 
-   config.port = atoi(mqtt_port.getValue());
+  config.port = atoi(mqtt_port.getValue());
   strcpy(config.server, mqtt_server.getValue());
   strcpy(config.user, mqtt_user.getValue());
-  strcpy(config.password, mqtt_password.getValue());
+  strcpy(config.password, mqtt_password.getValue()); */
 
 
-  // Save mqtt data
-  EEPROM.begin(sizeof(config));
-  if (shouldSave && result) {
-    Serial.println("Should save");
-    EEPROM.put(0, config);
-    EEPROM.commit();
-  } else {
-    EEPROM.get(0, config);
-  }
-  EEPROM.end();
+  strcmp(config.server, "192.168.100.10");
+  config.port = 1883;
+  strcmp(config.user, "User");
+  strcmp(config.password, "Password");
 
-
-  psk = WiFi.psk();
-  ssid = WiFi.SSID();
-  WiFi.disconnect();
   WiFi.setSleepMode(WIFI_NONE_SLEEP);
-  WiFi.setAutoReconnect(true);
-  WiFi.persistent(true);
+  WiFi.persistent(false);
 
-
-
-  client = new EspMQTTClient(
-    ssid.c_str(),
-    psk.c_str(),
-    "192.168.100.10",
-    config.user,
-    config.password,
-    CHIP_ID,
-    1883
-  );
-  client->setKeepAlive(15);
-
-  client->enableDebuggingMessages();
-  client->enableLastWillMessage("doorlock/" CHIP_ID "/opener/status", "false", true);
-  client->setMqttReconnectionAttemptDelay(5000);
-  client->setWifiReconnectionAttemptDelay(60000);
-
+  reconnect_wifi();
 }
 
-void onOpenDoor(String data) {
-  if(data == "true") {
-    Serial.write(relON, sizeof(relON));
-    delay(3000);
-    Serial.write(relOFF, sizeof(relOFF));
+void reconnect_wifi() {
+
+  if (psk == "" || ssid == "") {
+    setup_wifi();
+    return;
   }
+
+  if (WiFi.status() == WL_CONNECTED) {
+    return;
+  }
+  
+  
+  // Connect to wifi client
+  delay(10);
+  // We start by connecting to a WiFi network
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, psk);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  randomSeed(micros());
+
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
 }
 
-void onConnectionEstablished() {
-  client->publish("doorlock/" CHIP_ID "/opener/status", "true", true);
-  client->subscribe("doorlock/" CHIP_ID "/open", onOpenDoor);
+
+void setup(void) {
+  Serial.begin(9600);
+  Serial.print("Starting Connection");
+
+  Serial.write(relOFF, sizeof(relOFF));
+  delay(10);
+  Serial.write(relOFF, sizeof(relOFF));
+
+
+  setup_wifi();
+
+  client.setServer("192.168.100.10", 1883);
+  client.setCallback(callback);
+
+}
+
+
+void reconnect_mqtt() {
+
+  while(!client.connected()) {
+    Serial.print("Attempting MQTT connection...");
+    // Create a random client ID
+    String clientId = "ESP8266Client-";
+    clientId += String(random(0xffff), HEX);
+    // Attempt to connect
+    if (client.connect(clientId.c_str(), "doorlock/" CHIP_ID "/opener/status", 0, true, "false")) {
+      Serial.println("connected");
+      onConnectionEstablished();
+    } else {
+      reconnect_wifi();
+      Serial.print("failed, rc=");
+      Serial.print(client.state());
+      Serial.println(" try again in 5 seconds");
+      delay(5000);
+    }
+  }
 }
 
 void loop(void) {
-  client->loop();
+  reconnect_wifi();
+
+  if (!client.connected()) {
+    reconnect_mqtt();
+  }
+  
+  client.loop();
   delay(100);
 }

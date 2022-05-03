@@ -74,12 +74,14 @@ function authenticate(espObj, readObj) {
     try {
         let obj = {uid: readObj.uid, data: RandomBase64Bytes(48)}
         WriteFile(readObj.uid + ".json", JSON.stringify(obj))
+        // TODO send with tcp
         client.Publish("doorlock/" + espObj.id + "/write/data", obj.data, false)
     } catch (e) {
     }
 }
 
 function openDoor(espObj) {
+    // TODO write to opener chip
     client.Publish("doorlock/" + espObj.id + "/open", "true", false)
 }
 
@@ -114,20 +116,14 @@ function readHandle(topic, payload) {
 
 
 function close() {
-    client.Unsubscribe("doorlock/+/status")
-    client.Unsubscribe("doorlock/+/read")
     doorlocks.clear()
 }
 
-let options = new MQTTConfig()
-options.lastWill = true
-options.lastWillMessage = "false"
-options.lastWillRetain = true
-options.lastWillTopic = "doorlock/status"
-options.Hostname = "192.168.100.10"
-options.Port = 1883
 
-let client = new MQTTWrapper(options)
-client.Subscribe("doorlock/+/status", statusHandle)
-client.Subscribe("doorlock/+/read", readHandle)
+let ip_reader = "192.168.100.108";
+let port_reader = 5677;
+let ip_opener = "192.168.100.109";
+let port_opener = 5656;
+
+
 

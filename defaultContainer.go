@@ -3,6 +3,7 @@ package main
 import (
 	"Smarthome/gui"
 	"Smarthome/user"
+	"fmt"
 )
 
 func passwordChangeContainer() *gui.Container {
@@ -66,4 +67,51 @@ func passwordChangeContainer() *gui.Container {
 	return container
 }
 
-// TODO (Jan): defaultNewUserContainer to create a new user. Report errors via data if any occur
+func newUserContainer() *gui.Container {
+
+	data := gui.NewData("new_user_data", gui.NewAlert("new_user_alert", "", "info"))
+
+	onInit := func(user string) {
+	}
+
+	onUnload := func(user string) {
+		data.Update(gui.NewAlert("new_user_alert", "", "info"))
+	}
+
+	container := gui.NewContainer("default_new_user", "Create User", onInit, onUnload)
+
+	container.Add(data)
+
+	username := ""
+	password := ""
+
+	textUsername := gui.NewTextField("new_user_username", "Username", func(user string, text string) {
+		username = text
+	})
+	container.Add(textUsername)
+
+	textPassword := gui.NewTextField("new_user_password", "Password", func(user string, text string) {
+		password = text
+	})
+	container.Add(textPassword)
+
+	submit := gui.NewButton("new_user_submit", "Submit", func(userReq string) {
+		if _, err := user.Load(username); err == nil {
+			data.Update(gui.NewAlert("new_user_alert", "User already exists", "error"))
+			return
+		}
+
+		userCreated := user.New(username, password)
+		if err := userCreated.Store(); err != nil {
+			data.Update(gui.NewAlert("new_user_alert", fmt.Sprintf("%s", err.Error()), "error"))
+			return
+		}
+
+		data.Update(gui.NewAlert("new_user_alert", fmt.Sprintf("User %s successfully created", username), "success"))
+
+	})
+	container.Add(submit)
+
+	return container
+
+}

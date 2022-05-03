@@ -13,6 +13,7 @@ func main() {
 
 	guiHandler := gui.NewGui()
 	guiHandler.AddContainer(passwordChangeContainer())
+	guiHandler.AddContainer(newUserContainer())
 	container := scripting.NewScriptContainer("scripts", guiHandler)
 	container.RunAll().Wait()
 

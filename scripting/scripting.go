@@ -93,7 +93,7 @@ func (script *ScriptDescriptor) registerObjects() {
 	_ = script.vm.Set("Alert", script.Alert)
 	_ = script.vm.Set("TextField", script.TextField)
 	_ = script.vm.Set("Data", script.Data)
-
+	_ = script.vm.Set("TCPClient", script.TCPClient)
 }
 
 // registerFunctions registers all needed and public functions to the goja.Runtime of the ScriptDescriptor
@@ -344,4 +344,29 @@ func (script *ScriptDescriptor) Data(call goja.ConstructorCall) *goja.Object {
 		return instance
 	}
 	return nil
+}
+
+func (script *ScriptDescriptor) TCPClient(call goja.ConstructorCall) *goja.Object {
+	if len(call.Arguments) == 2 {
+		var hostname string
+		var port uint16
+		if err := script.vm.ExportTo(call.Argument(0), &hostname); err != nil {
+			return nil
+		}
+		if err := script.vm.ExportTo(call.Argument(1), &port); err != nil {
+			return nil
+		}
+		data := NewTCPClient(hostname, port)
+		instance := script.vm.ToValue(data).(*goja.Object)
+		_ = instance.SetPrototype(call.This.Prototype())
+		return instance
+	}
+	return nil
+}
+
+func (script *ScriptDescriptor) Mutex(call goja.ConstructorCall) *goja.Object {
+	data := &sync.Mutex{}
+	instance := script.vm.ToValue(data).(*goja.Object)
+	_ = instance.SetPrototype(call.This.Prototype())
+	return instance
 }
