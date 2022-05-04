@@ -35,8 +35,10 @@ MFRC522::MIFARE_Key key;
 WiFiClient espClient;
 PubSubClient client(espClient);
 
-String ssid = "";
-String psk = "";
+const String ssid = "<SSID>";
+const String psk = "<PASSWORD>";
+const char* mqtt_server = "<MQTT_SERVER_IP>";
+const int mqtt_port = 1883;
 
 Config config;
 
@@ -110,8 +112,8 @@ void callback(char *topic, byte* payload, unsigned int length) {
 
 void setup_wifi() {
 
-  strcmp(config.server, "<SomeIP>");
-  config.port = 1883;
+  strcmp(config.server, mqtt_server);
+  config.port = mqtt_port;
   strcmp(config.user, "User");
   strcmp(config.password, "Password");
 
@@ -135,6 +137,9 @@ void reconnect_wifi() {
   
   // Connect to wifi client
   delay(10);
+
+  WiFi.disconnect();
+  
   // We start by connecting to a WiFi network
   Serial.println();
   Serial.print("Connecting to ");
@@ -143,8 +148,13 @@ void reconnect_wifi() {
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, psk);
 
+  int counter = 0;
   while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
+    if(counter > 60) {
+      ESP.restart();
+    }
+    delay(1000);
+    counter++;
     Serial.print(".");
   }
 
@@ -184,7 +194,7 @@ void setup() {
 
   setup_wifi();
 
-  client.setServer("<SomeIP>", 1883);
+  client.setServer(mqtt_server, mqtt_port);
   client.setCallback(callback);
 }
 
@@ -392,7 +402,7 @@ void reconnect_mqtt() {
     String clientId = "ESP8266Client-";
     clientId += String(random(0xffff), HEX);
     // Attempt to connect
-    if (client.connect(clientId.c_str(), "doorlock/" CHIP_ID "/opener/status", 0, true, "false")) {
+    if (client.connect(clientId.c_str(), "doorlock/" CHIP_ID "/status", 0, true, "false")) {
       Serial.println("connected");
       onConnectionEstablished();
     } else {

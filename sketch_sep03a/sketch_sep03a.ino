@@ -2,9 +2,7 @@
 serialRelayTest.ino
 */
 
-#include <WiFiManager.h>
 #include <ESP8266WiFi.h>
-#include <EEPROM.h>
 #include <PubSubClient.h>
 
 
@@ -27,12 +25,13 @@ typedef struct {
 WiFiClient espClient;
 PubSubClient client(espClient);
 
-String ssid = "<SSID>";
-String psk = "<PASSWORD>";
+const String ssid = "<SSID>";
+const String psk = "<PASSWORD>";
+const char* mqtt_server = "<MQTT_SERVER_IP>";
+const int mqtt_port = 1883;
 
 Config config;
 
-WiFiManager manager;
 
 
 
@@ -78,29 +77,8 @@ void callback(char *topic, byte* payload, unsigned int length) {
 
 
 void setup_wifi() {
-
-  /* char port[6] = "";
-  WiFiManagerParameter mqtt_server("server", "mqtt server", config.server, 40);
-  WiFiManagerParameter mqtt_password("password", "mqtt password", config.password, 40);
-  WiFiManagerParameter mqtt_user("password", "mqtt user", config.password, 40);
-  WiFiManagerParameter mqtt_port("port", "mqtt port", port, 6);
-  manager.setSaveConfigCallback(onSaveCallback);
-  manager.setConnectTimeout(60);
-  manager.addParameter(&mqtt_server);
-  manager.addParameter(&mqtt_port);
-  manager.addParameter(&mqtt_user);
-  manager.addParameter(&mqtt_password);
-  auto result = manager.autoConnect("ConfigAP");
-
-
-  config.port = atoi(mqtt_port.getValue());
-  strcpy(config.server, mqtt_server.getValue());
-  strcpy(config.user, mqtt_user.getValue());
-  strcpy(config.password, mqtt_password.getValue()); */
-
-
-  strcmp(config.server, "192.168.100.10");
-  config.port = 1883;
+  strcmp(config.server, mqtt_server);
+  config.port = mqtt_port;
   strcmp(config.user, "User");
   strcmp(config.password, "Password");
 
@@ -124,6 +102,9 @@ void reconnect_wifi() {
   
   // Connect to wifi client
   delay(10);
+
+  WiFi.disconnect();
+  
   // We start by connecting to a WiFi network
   Serial.println();
   Serial.print("Connecting to ");
@@ -132,8 +113,13 @@ void reconnect_wifi() {
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, psk);
 
+  int counter = 0;
   while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
+    if(counter > 60) {
+      ESP.restart();
+    }
+    delay(1000);
+    counter++;
     Serial.print(".");
   }
 
@@ -157,7 +143,7 @@ void setup(void) {
 
   setup_wifi();
 
-  client.setServer("192.168.100.10", 1883);
+  client.setServer(mqtt_server, mqtt_port);
   client.setCallback(callback);
 
 }
